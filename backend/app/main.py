@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import documents, training, progress, passport, dashboard
+from app.api import documents, training, progress, passport, dashboard, organizations
 
 app = FastAPI(
     title="FestivalForce API",
@@ -21,6 +21,7 @@ app.include_router(training.router)
 app.include_router(progress.router)
 app.include_router(passport.router)
 app.include_router(dashboard.router)
+app.include_router(organizations.router)
 
 
 @app.get("/health")

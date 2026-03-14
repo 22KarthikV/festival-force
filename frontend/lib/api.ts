@@ -68,6 +68,10 @@ export const getProgress = (userId: string, programId: string) =>
 export const getPassport = (userId: string) =>
   request(`/api/passport/${userId}`)
 
+// Organizations
+export const createOrganization = (body: { name: string; user_id: string }) =>
+  request("/api/organizations", { method: "POST", body: JSON.stringify(body) })
+
 // Dashboard
 export const getEmployerDashboard = (orgId: string) =>
   request(`/api/dashboard/employer/${orgId}`)
