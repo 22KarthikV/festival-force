@@ -3,6 +3,7 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { Sparkles, Loader2, Building2, Users } from "lucide-react"
 
 function RegisterForm() {
   const router = useRouter()
@@ -34,10 +35,8 @@ function RegisterForm() {
       return
     }
 
-    // Try to sign in immediately (works when email confirmation is disabled)
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (signInError) {
-      // Email confirmation is enabled — show message instead of failing
       setEmailSent(true)
       setLoading(false)
       return
@@ -45,18 +44,27 @@ function RegisterForm() {
 
     let orgId: string | null = null
     if (role === "employer" && orgName) {
-      const { data: org } = await supabase.from("organizations").insert({ name: orgName }).select().single()
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .insert({ name: orgName })
+        .select()
+        .single()
+      if (orgError) {
+        console.error("Org insert error:", orgError)
+      }
       orgId = org?.id || null
     }
 
-    // Upsert profile (trigger may have already created a minimal row)
-    await supabase.from("users").upsert({
+    const { error: upsertError } = await supabase.from("users").upsert({
       id: authData.user.id,
       email,
       full_name: fullName,
       role,
       org_id: orgId,
     })
+    if (upsertError) {
+      console.error("User upsert error:", upsertError)
+    }
 
     if (role === "employer") {
       router.push("/employer/dashboard")
@@ -67,12 +75,21 @@ function RegisterForm() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center">
-          <div className="text-6xl mb-4">📧</div>
-          <h1 className="text-white text-2xl font-bold mb-2">Check your email</h1>
-          <p className="text-white/60 mb-6">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account, then log in.</p>
-          <Link href="/auth/login" className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-md text-center">
+          <div className="w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="w-8 h-8 text-violet-400" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-white mb-3">Check your email</h1>
+          <p className="text-white/50 mb-8 leading-relaxed">
+            We sent a confirmation link to{" "}
+            <span className="text-white font-medium">{email}</span>.{" "}
+            Click it to activate your account, then log in.
+          </p>
+          <Link
+            href="/auth/login"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold hover:opacity-90 transition-opacity duration-200"
+          >
             Go to Login
           </Link>
         </div>
@@ -81,20 +98,31 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-600/15 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-white text-2xl font-bold">
-            <span>🎪</span> FestivalForce
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-display text-xl font-bold text-white">FestivalForce</span>
           </Link>
-          <p className="text-white/60 mt-2">Create your account</p>
+          <p className="text-white/50 text-sm">Create your account</p>
         </div>
 
-        <form onSubmit={handleRegister} className="bg-white/10 backdrop-blur rounded-2xl p-8 border border-white/20">
-          <h1 className="text-white text-2xl font-bold mb-6">Sign up</h1>
+        <form
+          onSubmit={handleRegister}
+          className="bg-gray-900 rounded-2xl p-8 border border-white/10 shadow-2xl shadow-black/50"
+        >
+          <h1 className="font-display text-2xl font-bold text-white mb-6">Sign up</h1>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">{error}</div>
+            <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">
+              {error}
+            </div>
           )}
 
           {/* Role selector */}
@@ -104,60 +132,61 @@ function RegisterForm() {
                 key={r}
                 type="button"
                 onClick={() => setRole(r)}
-                className={`py-3 rounded-lg border text-sm font-medium transition ${
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all duration-200 cursor-pointer ${
                   role === r
-                    ? "bg-violet-500 border-violet-500 text-white"
-                    : "bg-white/5 border-white/20 text-white/60 hover:bg-white/10"
+                    ? "bg-violet-500/20 border-violet-400/50 text-violet-300"
+                    : "bg-gray-800 border-white/10 text-white/50 hover:text-white/80 hover:border-white/20"
                 }`}
               >
-                {r === "employer" ? "🏢 Employer" : "🙋 Volunteer"}
+                {r === "employer" ? <Building2 className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                {r === "employer" ? "Employer" : "Volunteer"}
               </button>
             ))}
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-white/70 text-sm mb-1">Full Name</label>
+              <label className="block text-white/60 text-xs font-medium mb-1.5 uppercase tracking-wide">Full Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-violet-400"
+                className="w-full px-4 py-3 rounded-xl bg-gray-800 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-400 transition-colors duration-200"
                 placeholder="Jane Smith"
                 required
               />
             </div>
             {role === "employer" && (
               <div>
-                <label className="block text-white/70 text-sm mb-1">Organisation Name</label>
+                <label className="block text-white/60 text-xs font-medium mb-1.5 uppercase tracking-wide">Organisation Name</label>
                 <input
                   type="text"
                   value={orgName}
                   onChange={e => setOrgName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-violet-400"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-800 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-400 transition-colors duration-200"
                   placeholder="The Voodoo Rooms"
                   required
                 />
               </div>
             )}
             <div>
-              <label className="block text-white/70 text-sm mb-1">Email</label>
+              <label className="block text-white/60 text-xs font-medium mb-1.5 uppercase tracking-wide">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-violet-400"
+                className="w-full px-4 py-3 rounded-xl bg-gray-800 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-400 transition-colors duration-200"
                 placeholder="you@example.com"
                 required
               />
             </div>
             <div>
-              <label className="block text-white/70 text-sm mb-1">Password</label>
+              <label className="block text-white/60 text-xs font-medium mb-1.5 uppercase tracking-wide">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-violet-400"
+                className="w-full px-4 py-3 rounded-xl bg-gray-800 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-violet-400 transition-colors duration-200"
                 placeholder="••••••••"
                 minLength={6}
                 required
@@ -168,14 +197,19 @@ function RegisterForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 py-3 rounded-lg bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold hover:opacity-90 transition disabled:opacity-50"
+            className="w-full mt-6 py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold hover:opacity-90 transition-opacity duration-200 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
-            {loading ? "Creating account..." : "Create account"}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating account...
+              </>
+            ) : "Create account"}
           </button>
 
-          <p className="text-white/50 text-center text-sm mt-4">
+          <p className="text-white/40 text-center text-sm mt-5">
             Have an account?{" "}
-            <Link href="/auth/login" className="text-violet-300 hover:text-violet-200">
+            <Link href="/auth/login" className="text-violet-400 hover:text-violet-300 transition-colors duration-200">
               Log in
             </Link>
           </p>
