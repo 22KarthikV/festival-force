@@ -16,6 +16,7 @@ function RegisterForm() {
   const [orgName, setOrgName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,8 +34,14 @@ function RegisterForm() {
       return
     }
 
-    // Sign in immediately to get a session (works when email confirmation is disabled)
-    await supabase.auth.signInWithPassword({ email, password })
+    // Try to sign in immediately (works when email confirmation is disabled)
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError) {
+      // Email confirmation is enabled — show message instead of failing
+      setEmailSent(true)
+      setLoading(false)
+      return
+    }
 
     let orgId: string | null = null
     if (role === "employer" && orgName) {
@@ -56,6 +63,21 @@ function RegisterForm() {
     } else {
       router.push("/training")
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="text-6xl mb-4">📧</div>
+          <h1 className="text-white text-2xl font-bold mb-2">Check your email</h1>
+          <p className="text-white/60 mb-6">We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate your account, then log in.</p>
+          <Link href="/auth/login" className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-pink-500 to-violet-500 text-white font-semibold">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
