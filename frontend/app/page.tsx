@@ -96,7 +96,7 @@ export default function LandingPage() {
             {
               icon: "📊",
               title: "Real-Time Dashboard",
-              desc: "Track who&apos;s trained, who&apos;s certified, and who&apos;s available. Rush Mode highlights your top shift-ready volunteers instantly.",
+              desc: "Track who's trained, who's certified, and who's available. Rush Mode highlights your top shift-ready volunteers instantly.",
             },
             {
               icon: "⚡",
