@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { getCurrentUser } from "@/lib/supabase"
+import { getCurrentUser, supabase } from "@/lib/supabase"
 import { getLeaderboard } from "@/lib/api"
 
 export default function LeaderboardPage() {
@@ -15,9 +15,29 @@ export default function LeaderboardPage() {
     getCurrentUser().then(async u => {
       if (!u) { router.push("/auth/login"); return }
       setUser(u)
-      if (u.org_id) {
-        const data = await getLeaderboard(u.org_id)
-        setLeaders(data)
+      let orgId = u.org_id
+
+      // Volunteers don't have org_id — look it up via their enrolled programs
+      if (!orgId) {
+        const { data: progress } = await supabase
+          .from("volunteer_progress")
+          .select("program_id")
+          .eq("user_id", u.id)
+          .limit(1)
+          .single()
+        if (progress?.program_id) {
+          const { data: prog } = await supabase
+            .from("training_programs")
+            .select("org_id")
+            .eq("id", progress.program_id)
+            .single()
+          orgId = prog?.org_id
+        }
+      }
+
+      if (orgId) {
+        const data = await getLeaderboard(orgId)
+        setLeaders(data as any[])
       }
       setLoading(false)
     })
