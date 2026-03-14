@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { Inter, Outfit } from "next/font/google"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", preload: false })
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit", preload: false })
 
 export const metadata: Metadata = {
   title: "FestivalForce — AI Training for Event Workers",
