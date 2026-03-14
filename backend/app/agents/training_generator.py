@@ -3,7 +3,10 @@ from openai import AsyncOpenAI
 from app.core.config import get_settings
 
 settings = get_settings()
-_openai = AsyncOpenAI(api_key=settings.openai_api_key)
+_openai = AsyncOpenAI(
+    api_key=settings.openai_api_key,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+)
 
 SYSTEM_PROMPT = """You are a professional training content designer for the hospitality and events industry.
 Given a job role and company policy documents, generate structured training modules.
@@ -43,7 +46,7 @@ Company Documents Context:
 Generate comprehensive training modules for this role. Use the document context to make the training specific and accurate."""
 
     response = await _openai.chat.completions.create(
-        model="gpt-4o",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},

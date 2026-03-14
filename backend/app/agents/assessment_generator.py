@@ -3,7 +3,10 @@ from openai import AsyncOpenAI
 from app.core.config import get_settings
 
 settings = get_settings()
-_openai = AsyncOpenAI(api_key=settings.openai_api_key)
+_openai = AsyncOpenAI(
+    api_key=settings.openai_api_key,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+)
 
 SYSTEM_PROMPT = """You are a professional assessment designer for hospitality training.
 Generate a 10-question final assessment covering all training modules provided.
@@ -38,7 +41,7 @@ async def generate_assessment(modules: list, context: str = "") -> dict:
             modules_text += f"  - {slide['title']}: {slide['content'][:300]}\n"
 
     response = await _openai.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gemini-2.0-flash",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {

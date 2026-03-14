@@ -4,12 +4,15 @@ from app.db.supabase_client import get_supabase_admin
 from app.core.config import get_settings
 
 settings = get_settings()
-_openai = AsyncOpenAI(api_key=settings.openai_api_key)
+_openai = AsyncOpenAI(
+    api_key=settings.openai_api_key,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+)
 
 
 async def embed_text(text: str) -> List[float]:
     response = await _openai.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-004",
         input=text,
     )
     return response.data[0].embedding
