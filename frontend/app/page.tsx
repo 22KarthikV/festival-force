@@ -1,6 +1,27 @@
+"use client"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 
 export default function LandingPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleDashboard = () => {
+    supabase.from("users").select("role").eq("id", user.id).single().then(({ data }) => {
+      router.push(data?.role === "employer" ? "/employer/dashboard" : "/training")
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-indigo-900 text-white">
       {/* Nav */}
@@ -10,12 +31,20 @@ export default function LandingPage() {
           <span className="text-xl font-bold">FestivalForce</span>
         </div>
         <div className="flex gap-4">
-          <Link href="/auth/login" className="px-4 py-2 rounded-lg border border-white/20 hover:bg-white/10 transition">
-            Log in
-          </Link>
-          <Link href="/auth/register" className="px-4 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 transition font-medium">
-            Get Started
-          </Link>
+          {user ? (
+            <button onClick={handleDashboard} className="px-4 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 transition font-medium">
+              Go to Dashboard →
+            </button>
+          ) : (
+            <>
+              <Link href="/auth/login" className="px-4 py-2 rounded-lg border border-white/20 hover:bg-white/10 transition">
+                Log in
+              </Link>
+              <Link href="/auth/register" className="px-4 py-2 rounded-lg bg-violet-500 hover:bg-violet-400 transition font-medium">
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 

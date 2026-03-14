@@ -1,8 +1,11 @@
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
 
+// bypass-tunnel-reminder is required for localtunnel to pass browser requests
+const TUNNEL_HEADERS = { "bypass-tunnel-reminder": "true" }
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: { "Content-Type": "application/json", ...TUNNEL_HEADERS, ...options?.headers },
     ...options,
   })
   if (!res.ok) {
@@ -16,6 +19,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const uploadDocument = async (formData: FormData) => {
   const res = await fetch(`${BASE_URL}/api/documents/upload`, {
     method: "POST",
+    headers: { ...TUNNEL_HEADERS },
     body: formData,
   })
   if (!res.ok) throw new Error(await res.text())
