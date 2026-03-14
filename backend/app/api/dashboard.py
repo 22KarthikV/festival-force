@@ -9,12 +9,16 @@ router = APIRouter(prefix="/api", tags=["dashboard"])
 async def get_employer_dashboard(org_id: str):
     db = get_supabase_admin()
 
-    volunteers_result = db.table("users").select("id,full_name,email,avatar_url").eq("org_id", org_id).eq("role", "volunteer").execute()
-    volunteers = volunteers_result.data or []
-
     programs_result = db.table("training_programs").select("id,title").eq("org_id", org_id).execute()
     programs = programs_result.data or []
     program_ids = [p["id"] for p in programs]
+
+    # Find volunteers via enrollment in org's programs (not by org_id, since volunteers don't set org_id)
+    enrolled_result = db.table("volunteer_progress").select("user_id").in_("program_id", program_ids).execute() if program_ids else None
+    volunteer_ids = list(set([r["user_id"] for r in (enrolled_result.data or [])])) if enrolled_result else []
+
+    volunteers_result = db.table("users").select("id,full_name,email,avatar_url").in_("id", volunteer_ids).eq("role", "volunteer").execute() if volunteer_ids else None
+    volunteers = volunteers_result.data if volunteers_result else []
 
     volunteer_data = []
     shift_ready_count = 0
@@ -64,8 +68,13 @@ async def get_employer_dashboard(org_id: str):
 async def get_leaderboard(org_id: str):
     db = get_supabase_admin()
 
-    volunteers_result = db.table("users").select("id,full_name,email").eq("org_id", org_id).eq("role", "volunteer").execute()
-    volunteers = volunteers_result.data or []
+    # Find volunteers via enrollment in org's programs
+    prog_ids_result = db.table("training_programs").select("id").eq("org_id", org_id).execute()
+    prog_ids = [p["id"] for p in (prog_ids_result.data or [])]
+    enrolled_result = db.table("volunteer_progress").select("user_id").in_("program_id", prog_ids).execute() if prog_ids else None
+    vol_ids = list(set([r["user_id"] for r in (enrolled_result.data or [])])) if enrolled_result else []
+    volunteers_result = db.table("users").select("id,full_name,email").in_("id", vol_ids).eq("role", "volunteer").execute() if vol_ids else None
+    volunteers = volunteers_result.data if volunteers_result else []
 
     leaderboard = []
     for v in volunteers:
@@ -101,8 +110,13 @@ async def activate_rush_mode(org_id: str):
     """Returns top shift-ready volunteers sorted by readiness score."""
     db = get_supabase_admin()
 
-    volunteers_result = db.table("users").select("id,full_name,email").eq("org_id", org_id).eq("role", "volunteer").execute()
-    volunteers = volunteers_result.data or []
+    # Find volunteers via enrollment in org's programs
+    prog_ids_result = db.table("training_programs").select("id").eq("org_id", org_id).execute()
+    prog_ids = [p["id"] for p in (prog_ids_result.data or [])]
+    enrolled_result = db.table("volunteer_progress").select("user_id").in_("program_id", prog_ids).execute() if prog_ids else None
+    vol_ids = list(set([r["user_id"] for r in (enrolled_result.data or [])])) if enrolled_result else []
+    volunteers_result = db.table("users").select("id,full_name,email").in_("id", vol_ids).eq("role", "volunteer").execute() if vol_ids else None
+    volunteers = volunteers_result.data if volunteers_result else []
 
     rush_candidates = []
     for v in volunteers:
