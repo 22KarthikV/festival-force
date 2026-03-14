@@ -3,7 +3,6 @@ import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
-import { createOrganization } from "@/lib/api"
 import { Sparkles, Loader2, Building2, Users } from "lucide-react"
 
 function RegisterForm() {
@@ -43,24 +42,24 @@ function RegisterForm() {
       return
     }
 
-    // Upsert the user profile first (without org_id)
-    const { error: upsertError } = await supabase.from("users").upsert({
-      id: authData.user.id,
-      email,
-      full_name: fullName,
-      role,
-    })
-    if (upsertError) {
-      console.error("User upsert error:", upsertError)
-    }
-
-    // For employers, create org via backend (service role bypasses RLS)
     if (role === "employer" && orgName) {
-      try {
-        await createOrganization({ name: orgName, user_id: authData.user.id })
-      } catch (orgErr) {
-        console.error("Org creation error:", orgErr)
-      }
+      // Single atomic RPC — SECURITY DEFINER bypasses RLS, creates org + user profile together
+      const { error: rpcError } = await supabase.rpc("create_employer_with_org", {
+        p_user_id: authData.user.id,
+        p_email: email,
+        p_full_name: fullName,
+        p_org_name: orgName,
+      })
+      if (rpcError) console.error("create_employer_with_org error:", rpcError)
+    } else {
+      // Volunteer — upsert profile only
+      const { error: upsertError } = await supabase.from("users").upsert({
+        id: authData.user.id,
+        email,
+        full_name: fullName,
+        role,
+      })
+      if (upsertError) console.error("User upsert error:", upsertError)
     }
 
     if (role === "employer") {

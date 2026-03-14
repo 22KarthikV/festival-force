@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { getCurrentUser, supabase } from "@/lib/supabase"
-import { uploadDocument, createOrganization } from "@/lib/api"
+import { uploadDocument } from "@/lib/api"
 import { Sparkles, ArrowLeft, Upload, FileText, CheckCircle2, XCircle, Loader2, Building2 } from "lucide-react"
 
 interface UploadedDoc {
@@ -34,14 +34,18 @@ export default function UploadPage() {
     setSavingOrg(true)
     setOrgError("")
 
-    try {
-      const result = await createOrganization({ name: orgName.trim(), user_id: user.id })
-      setUser({ ...user, org_id: result.org_id })
-    } catch (err: any) {
-      setOrgError("Failed to create organisation: " + (err?.message || "Unknown error"))
-    } finally {
-      setSavingOrg(false)
+    const { data, error } = await supabase.rpc("create_employer_with_org", {
+      p_user_id: user.id,
+      p_email: user.email,
+      p_full_name: user.full_name || "",
+      p_org_name: orgName.trim(),
+    })
+    if (error) {
+      setOrgError("Failed to create organisation: " + error.message)
+    } else {
+      setUser({ ...user, org_id: data.org_id })
     }
+    setSavingOrg(false)
   }
 
   const handleFiles = useCallback(async (files: FileList) => {
